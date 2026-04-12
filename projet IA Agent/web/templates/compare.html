@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card">
+    <h2>Comparaison de Candidats</h2>
+    {% if candidates %}
+    <div style="--col-count: {{ candidates|length }}; display: grid; grid-template-columns: repeat(var(--col-count), 1fr); gap: 1rem; margin-top: 2rem;">
+        {% for cand in candidates %}
+        <div style="background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 8px; border-top: 4px solid var(--primary);">
+            <h3 style="margin-bottom: 0.5rem;">{{ cand.name }}</h3>
+            <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent); margin-bottom: 1rem;">
+                {{ "%.1f"|format(cand.final_score|default(0)) }} / 100
+            </div>
+            <h4>Note de l'IA :</h4>
+            <p style="font-size: 0.9rem; color: var(--text-gray); line-height: 1.5;">
+                {{ cand.recommendation }}
+            </p>
+            <hr style="border-color: rgba(255,255,255,0.1); margin: 1rem 0;">
+            <h4>Scores par dimension :</h4>
+            <ul style="list-style: none; padding: 0; font-size: 0.85rem;">
+                {% for dim in cand.dimension_scores %}
+                <li style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: var(--text-gray);">{{ dim.dimension_name }}</span>
+                    <strong>{{ "%.0f"|format(dim.score) }}</strong>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>Aucun candidat sélectionné. Allez sur le dashboard pour sélectionner des candidats à comparer.</p>
+    {% endif %}
+</div>
+{% endblock %}

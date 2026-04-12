@@ -1,0 +1,152 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+    <!-- SCORE DISTRIBUTION -->
+    <div class="card">
+        <h2>Distribution des Scores Finaux</h2>
+        <div style="height: 300px; margin-top: 1rem;">
+            <canvas id="scoreChart"></canvas>
+        </div>
+    </div>
+
+    <!-- RADAR CHART (Average vs Top Candidate or multiple candidates) -->
+    <div class="card">
+        <h2>Radar Mnémonique (Candidats)</h2>
+        <div style="height: 300px; margin-top: 1rem;">
+            <canvas id="radarChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- AVG SCORES -->
+    <div class="card">
+        <h2>Moyennes par Dimension</h2>
+        <ul style="list-style: none; padding: 0;">
+            {% for dim, val in avg_dimensions.items() %}
+            <li style="padding: 0.8rem; background: rgba(255,255,255,0.05); margin-bottom: 0.5rem; border-radius: 6px; display: flex; justify-content: space-between;">
+                <span>{{ dim }}</span>
+                <strong style="color: var(--accent);">{{ val }} / 100</strong>
+            </li>
+            {% endfor %}
+            {% if not avg_dimensions %}
+            <li>Aucune donnée disponible.</li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <!-- SKILLS GAP ANALYSIS -->
+    <div class="card">
+        <h2>Top Skills Gap Analysis</h2>
+        <p style="color: var(--text-gray); font-size: 0.9rem;">Compétences requises les plus souvent absentes chez les candidats.</p>
+        <ul style="list-style: none; padding: 0;">
+            {% for skill, count in top_missing_skills %}
+            <li style="padding: 0.8rem; background: rgba(239, 68, 68, 0.1); border-left: 4px solid var(--primary); margin-bottom: 0.5rem; border-radius: 4px; display: flex; justify-content: space-between;">
+                <strong>{{ skill }}</strong>
+                <span class="premium-badge" style="background: #ef4444;">Absente {{ count }} fois</span>
+            </li>
+            {% endfor %}
+            {% if not top_missing_skills %}
+            <li>Aucun gap notable identifié.</li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+<!-- Hidden JSON data islands -->
+<script id="data-scores" type="application/json">{{ scores | tojson }}</script>
+<script id="data-radar" type="application/json">{{ radar_data | tojson }}</script>
+<script id="data-avg" type="application/json">{{ avg_dimensions | tojson }}</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // --- Parse Data Safely ---
+        const scores = JSON.parse(document.getElementById('data-scores').textContent || "[]");
+        const bins = {"0-20": 0, "21-40": 0, "41-60": 0, "61-80": 0, "81-100": 0};
+        scores.forEach(s => {
+            if(s <= 20) bins["0-20"]++;
+            else if(s <= 40) bins["21-40"]++;
+            else if(s <= 60) bins["41-60"]++;
+            else if(s <= 80) bins["61-80"]++;
+            else bins["81-100"]++;
+        });
+
+        const ctxBar = document.getElementById('scoreChart').getContext('2d');
+        new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(bins),
+                datasets: [{
+                    label: 'Candidats par tranche',
+                    data: Object.values(bins),
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#94a3b8' } },
+                    x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#94a3b8' } }
+                },
+                plugins: { legend: { labels: { color: '#f8fafc' } } }
+            }
+        });
+
+        // --- Radar Chart ---
+        const radarData = JSON.parse(document.getElementById('data-radar').textContent || "[]");
+        const avg_dims = JSON.parse(document.getElementById('data-avg').textContent || "{}");
+        
+        let radarLabels = Object.keys(avg_dims || {});
+        let datasets = [];
+        
+        // Add Average Dataset
+        if (radarLabels.length > 0) {
+            datasets.push({
+                label: 'Moyenne Globale',
+                data: Object.values(avg_dims),
+                backgroundColor: 'rgba(16, 185, 129, 0.2)', // Accent color
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 2,
+            });
+            
+            if (radarData.length > 0) {
+                let c = radarData[0];
+                let c_data = radarLabels.map(l => c.dimensions[l] || 0);
+                datasets.push({
+                    label: c.name,
+                    data: c_data,
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)', // Primary color
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 2,
+                });
+            }
+        }
+
+        const ctxRadar = document.getElementById('radarChart').getContext('2d');
+        new Chart(ctxRadar, {
+            type: 'radar',
+            data: {
+                labels: radarLabels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255,255,255,0.1)' },
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        pointLabels: { color: '#94a3b8', font: {size: 10} },
+                        ticks: { backdropColor: 'transparent', color: '#f8fafc', stepSize: 20 }
+                    }
+                },
+                plugins: { legend: { labels: { color: '#f8fafc' } } }
+            }
+        });
+    });
+</script>
+{% endblock %}

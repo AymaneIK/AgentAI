@@ -1,0 +1,134 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+    <!-- LEFT PANEL: JOBS -->
+    <div class="card">
+        <h3>Fiches de Poste Actives</h3>
+        <ul style="list-style: none; padding: 0;">
+            {% for job in jobs %}
+            <li style="padding: 1rem; background: rgba(255,255,255,0.05); margin-bottom: 0.5rem; border-radius: 6px;">
+                <strong>{{ job.title }}</strong><br>
+                <small style="color: var(--text-gray);">{{ job.sector }} | {{ job.education_level }}</small>
+            </li>
+            {% endfor %}
+        </ul>
+        <hr style="border: 1px solid rgba(255,255,255,0.1); margin: 1.5rem 0;">
+        <h4>Créer une nouvelle Fiche</h4>
+        <form action="{{ url_for('create_job') }}" method="POST">
+            <input type="text" name="title" placeholder="Titre (ex: Développeur Python)" required>
+            <textarea name="description" placeholder="Description du poste" rows="3" required></textarea>
+            <input type="text" name="skills" placeholder="Compétences (CSV)" required>
+            <input type="text" name="education_level" placeholder="Niveau (ex: Bac+5)" required>
+            <input type="number" name="experience_years" placeholder="Années d'exp requises" required>
+            <input type="text" name="sector" placeholder="Secteur" required>
+            <button type="submit" class="btn" style="margin-top: 1rem; width: 100%;">Créer</button>
+        </form>
+    </div>
+
+    <!-- RIGHT PANEL: CVS -->
+    <div class="card">
+        <h3>Lancer un Screening session</h3>
+        <p style="color: var(--text-gray);">Sélectionnez une fiche de poste et uploadez des CVs (PDF, DOCX) pour analyse.</p>
+        
+        <form action="{{ url_for('screen_job') }}" method="POST" enctype="multipart/form-data" style="margin-top: 1.5rem;" id="screenForm">
+            <select name="job_id" required style="margin-bottom: 1rem;">
+                <option value="" disabled selected>-- Sélectionnez la fiche de poste cible --</option>
+                {% for job in jobs %}
+                <option value="{{ job.id }}">{{ job.title }}</option>
+                {% endfor %}
+            </select>
+            
+            <div class="cyber-dropzone" id="dropzone">
+                <h4 style="margin:0; color: var(--primary);">Drag & Drop vos CVs ici</h4>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Vous pouvez sélectionner autant de PDF / DOCX que vous le souhaitez !</p>
+                <input type="file" name="cv_files" id="cv_files" multiple accept=".pdf,.doc,.docx" required>
+            </div>
+            <div id="file-preview-list"></div>
+
+            <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="anonymize" value="true" style="width: 20px; height: 20px; margin:0;"> 
+                    <span style="font-weight: 500;">Anonymiser les profils (Supprime noms et contacts via IA pour contrer le biais)</span>
+                </label>
+            </div>
+            
+            <button type="submit" class="btn btn-accent" style="margin-top: 1.5rem; width: 100%; font-size: 1.1rem; padding: 1.2rem;">🚀 Lancer le Screening IA Massif</button>
+        </form>
+
+        <script>
+            const fileInput = document.getElementById('cv_files');
+            const previewList = document.getElementById('file-preview-list');
+            const dropzone = document.getElementById('dropzone');
+            
+            // To accumulate all dropped/selected files without overwriting
+            const dataTransfer = new DataTransfer();
+
+            function updatePreview() {
+                previewList.innerHTML = '';
+                Array.from(fileInput.files).forEach(file => {
+                    const el = document.createElement('div');
+                    el.className = 'file-badge';
+                    el.innerHTML = `<span>📄 ${file.name}</span> <span style="color: var(--text-muted); font-size:0.8rem;">${(file.size/1024).toFixed(1)} KB</span>`;
+                    previewList.appendChild(el);
+                });
+            }
+
+            fileInput.addEventListener('change', (e) => {
+                // Add newly selected files to our persistent DataTransfer bank
+                Array.from(fileInput.files).forEach(file => {
+                    // Quick check to avoid duplicating the exact same file name if desired (optional)
+                    dataTransfer.items.add(file);
+                });
+                
+                // Overwrite the input's internal file list with our accumulated massive list!
+                fileInput.files = dataTransfer.files;
+                updatePreview();
+            });
+
+            // Prevent default drag behaviors to stop the browser from ignoring drops
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, preventDefaults, false);
+            });
+            function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+            // Visual effects
+            dropzone.addEventListener('dragover', () => dropzone.classList.add('dragover'));
+            dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+            
+            // Handle actual dropping directly into the dropzone (optional since input covers it, but safer)
+            dropzone.addEventListener('drop', (e) => {
+                dropzone.classList.remove('dragover');
+                if(e.dataTransfer.files.length > 0) {
+                    Array.from(e.dataTransfer.files).forEach(file => dataTransfer.items.add(file));
+                    fileInput.files = dataTransfer.files;
+                    updatePreview();
+                }
+            });
+        </script>
+
+        <h3 style="margin-top: 3rem;">Sessions de Screening</h3>
+        {% if sessions %}
+        <ul style="list-style: none; padding: 0;">
+            {% for session in sessions %}
+            <li style="padding: 1rem; background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--primary); border-radius: 4px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>Job #{{ session.job_id }}</strong> - {{ session.timestamp.strftime('%d/%m/%Y %H:%M') }}<br>
+                    <small>{{ session.candidates|length }} CV(s) analysé(s)</small>
+                </div>
+                <div>
+                    <form action="{{ url_for('compare') }}" method="GET" style="display:inline;">
+                        <input type="hidden" name="ids" value="{{ session.candidates|map(attribute='id')|join(',') }}">
+                        <button type="submit" class="btn" style="padding: 0.5rem 1rem; font-size: 0.8rem;">Voir Résultats</button>
+                    </form>
+                    <a href="{{ url_for('export_session', session_id=session.id) }}" class="btn btn-accent" style="padding: 0.5rem 1rem; font-size: 0.8rem; text-decoration: none;">Export Excel</a>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>Aucune session récente.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

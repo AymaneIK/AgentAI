@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 5rem auto;" class="card">
+    <h2 style="text-align: center; margin-bottom: 2rem;">Connexion Agent RH</h2>
+    <form method="POST">
+        <div style="margin-bottom: 1rem;">
+            <label for="username">Nom d'utilisateur</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div style="margin-bottom: 2rem;">
+            <label for="password">Mot de passe</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit" class="btn" style="width: 100%;">Se connecter</button>
+    </form>
+</div>
+{% endblock %}
