@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+    <h2 style="color: var(--primary);">Règles de Scoring de l'Agent IA</h2>
+    <p style="color: var(--text-gray); margin-bottom: 2rem;">Voici de manière transparente la pondération et la méthode de calcul du score de l'Intelligence Artificielle pour les candidats.</p>
+
+    <div style="background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 6px; margin-bottom: 1.5rem;">
+        <h3 style="color: var(--accent); margin-top: 0;">1. Règle d'Élimination Directe (Auto-Rejet)</h3>
+        <p>Un candidat est <strong>automatiquement rejeté (Score = 0)</strong> et annoté comme "Non Fit" si au moins l'une de ces conditions est vraie :</p>
+        <ul style="color: #cbd5e1; line-height: 1.6;">
+            <li><strong style="color: #ef4444;">Niveau académique insuffisant :</strong> Le diplôme du candidat est strictement inférieur à celui requis.</li>
+            <li><strong style="color: #ef4444;">Manque flagrant d'expérience :</strong> L'expérience totale est inférieure à la moitié de l'expérience requise.</li>
+            <li><strong style="color: #ef4444;">Lacune de compétences :</strong> Le candidat ne possède quasiment aucune des compétences techniques de la fiche de poste (score de compétence < 20/100).</li>
+        </ul>
+    </div>
+
+    <h3>2. Pondération Globale</h3>
+    <table style="width: 100%; text-align: left; border-collapse: collapse; margin-bottom: 2rem;">
+        <thead>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <th style="padding: 0.8rem 0;">Dimension</th>
+                <th style="padding: 0.8rem 0;">Poids</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">Compétences Techniques</td><td style="padding: 0.8rem 0; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.05);">30%</td></tr>
+            <tr><td style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">Années d'Expérience</td><td style="padding: 0.8rem 0; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.05);">20%</td></tr>
+            <tr><td style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">Niveau d'Étude</td><td style="padding: 0.8rem 0; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.05);">15%</td></tr>
+            <tr><td style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">Secteur d'Activité</td><td style="padding: 0.8rem 0; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.05);">15%</td></tr>
+            <tr><td style="padding: 0.8rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">Langues Parlées</td><td style="padding: 0.8rem 0; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.05);">10%</td></tr>
+            <tr><td style="padding: 0.8rem 0;">Nombre d'Expériences Précédentes</td><td style="padding: 0.8rem 0; font-weight: bold;">10%</td></tr>
+        </tbody>
+    </table>
+
+    <h3>3. Détail de l'Affectation des Points (sur 100)</h3>
+    
+    <div style="margin-bottom: 1.5rem;">
+        <h4>🏆 Compétences Techniques (30%)</h4>
+        <p style="font-size: 0.9rem; color: #94a3b8;">Attribution basée sur la ressemblance algorithmique (Fuzzy Matching). Chaque compétence requise trouvée augmente le score. Un bonus est attribué pour les compétences supplémentaires du candidat.</p>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+        <h4>⏳ Expérience (20%)</h4>
+        <ul style="font-size: 0.9rem; color: #94a3b8;">
+            <li><strong>Exact Match :</strong> 100 points</li>
+            <li><strong>Surqualifié :</strong> 100 points maximum</li>
+            <li><strong>Sous-qualifié (mais accepté) :</strong> Score proportionnel (ex: 3 ans pour 4 ans requis = 75 points)</li>
+        </ul>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+        <h4>🎓 Niveau d'Étude (15%)</h4>
+        <ul style="font-size: 0.9rem; color: #94a3b8;">
+            <li><strong>Exact Match ou Supérieur :</strong> 100 points</li>
+            <li><strong>1 Niveau Académique de moins :</strong> 75 points</li>
+            <li><strong>Plus de 1 niveau de moins :</strong> Déclenche généralement l'auto-rejet.</li>
+        </ul>
+    </div>
+
+    <div style="margin-top: 2rem; text-align: center;">
+        <a href="{{ url_for('dashboard') }}" class="btn">&larr; Retour au Dashboard</a>
+    </div>
+</div>
+{% endblock %}

@@ -16,6 +16,7 @@ class JobProfile(Base):
     title = Column(String, index=True)
     description = Column(Text)
     required_skills = Column(Text) # JSON string
+    required_languages = Column(Text, default="[]") # JSON string
     education_level = Column(String) # e.g. "Bac+5"
     experience_years = Column(Integer)
     sector = Column(String)
@@ -43,6 +44,8 @@ class Candidate(Base):
     original_text = Column(Text)
     
     # Final aggregated score
+    is_fit = Column(Boolean, default=True)
+    rejection_reason = Column(Text, nullable=True)
     final_score = Column(Float, nullable=True)
     recommendation = Column(Text, nullable=True) # Claude's hiring note
 

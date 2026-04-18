@@ -1,35 +1,67 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="card">
-    <h2>Comparaison de Candidats</h2>
+<section class="page-head">
+    <span class="eyebrow">Comparaison de candidats</span>
+    <h1 class="hero-title compact">Analyse detaillee des profils</h1>
+    <p class="hero-copy compact">
+        Faites defiler horizontalement si besoin pour consulter tous les candidats compares.
+    </p>
+</section>
+
+<div class="card compare-card">
     {% if candidates %}
-    <div style="--col-count: {{ candidates|length }}; display: grid; grid-template-columns: repeat(var(--col-count), 1fr); gap: 1rem; margin-top: 2rem;">
-        {% for cand in candidates %}
-        <div style="background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 8px; border-top: 4px solid var(--primary);">
-            <h3 style="margin-bottom: 0.5rem;">{{ cand.name }}</h3>
-            <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent); margin-bottom: 1rem;">
-                {{ "%.1f"|format(cand.final_score|default(0)) }} / 100
-            </div>
-            <h4>Note de l'IA :</h4>
-            <p style="font-size: 0.9rem; color: var(--text-gray); line-height: 1.5;">
-                {{ cand.recommendation }}
-            </p>
-            <hr style="border-color: rgba(255,255,255,0.1); margin: 1rem 0;">
-            <h4>Scores par dimension :</h4>
-            <ul style="list-style: none; padding: 0; font-size: 0.85rem;">
-                {% for dim in cand.dimension_scores %}
-                <li style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span style="color: var(--text-gray);">{{ dim.dimension_name }}</span>
-                    <strong>{{ "%.0f"|format(dim.score) }}</strong>
-                </li>
-                {% endfor %}
-            </ul>
+    <div class="compare-scroll">
+        <div class="compare-grid">
+            {% for cand in candidates %}
+            <article class="candidate-panel {% if cand.is_fit %}fit{% else %}not-fit{% endif %}">
+                <div class="candidate-top">
+                    <div>
+                        <div class="candidate-label">{% if cand.is_fit %}FIT{% else %}NON FIT{% endif %}</div>
+                        <h2>{{ cand.name }}</h2>
+                    </div>
+                    <div class="candidate-score {% if not cand.is_fit %}danger{% endif %}">
+                        {% if cand.is_fit %}
+                        {{ "%.1f"|format(cand.final_score|default(0)) }}
+                        {% else %}
+                        0
+                        {% endif %}
+                        <span>/ 100</span>
+                    </div>
+                </div>
+
+                {% if cand.is_fit %}
+                <div class="note-box">
+                    <h3>Note de l'agent</h3>
+                    <p>{{ cand.recommendation }}</p>
+                </div>
+                {% else %}
+                <div class="note-box danger-box">
+                    <h3>Raison du rejet</h3>
+                    <p>{{ cand.rejection_reason }}</p>
+                </div>
+                {% endif %}
+
+                <div class="dimension-block">
+                    <h3>Scores par dimension</h3>
+                    <div class="dimension-list">
+                        {% for dim in cand.dimension_scores %}
+                        <div class="dimension-row">
+                            <span>{{ dim.dimension_name }}</span>
+                            <strong>{{ "%.0f"|format(dim.score) }}</strong>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
     {% else %}
-    <p>Aucun candidat sélectionné. Allez sur le dashboard pour sélectionner des candidats à comparer.</p>
+    <div class="empty-state">
+        <h3>Aucun candidat selectionne</h3>
+        <p>Retournez au dashboard pour lancer une session ou ouvrir des resultats compares.</p>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

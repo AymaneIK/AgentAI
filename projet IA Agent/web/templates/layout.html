@@ -4,31 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CV Screening Agent</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+    <div class="page-glow glow-one"></div>
+    <div class="page-glow glow-two"></div>
+
     <nav class="navbar">
-        <div class="logo">HR-CV Agent <span class="premium-badge">PRO</span></div>
+        <a href="{{ url_for('dashboard') }}" class="brand-block">
+            <span class="brand-mark">AI</span>
+            <div class="brand-copy">
+                <strong>HR CV Agent</strong>
+                <span>Recruitment screening cockpit</span>
+            </div>
+        </a>
+
         <div class="nav-links">
             {% if current_user.is_authenticated %}
-                <a href="{{ url_for('dashboard') }}">Dashboard</a>
-                <a href="{{ url_for('analytics') }}">Analytics</a>
-                <a href="{{ url_for('logout') }}" class="btn-logout">Déconnexion</a>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('analytics') }}">Analytics</a>
+            <a href="{{ url_for('scoring_rules') }}">Regles</a>
+            <a href="{{ url_for('logout') }}" class="btn btn-ghost">Deconnexion</a>
             {% endif %}
         </div>
     </nav>
+
     <main class="container">
         {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {% for message in messages %}
-                        <div class="flash">{{ message }}</div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for message in messages %}
+            <div class="flash">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
         {% endwith %}
         {% block content %}{% endblock %}
     </main>

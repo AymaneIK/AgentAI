@@ -25,6 +25,7 @@ def create_job(db: Session, title: str, description: str, skills: list, educatio
         title=title, 
         description=description, 
         required_skills=json.dumps(skills),
+        required_languages=json.dumps([]),
         education_level=education_level,
         experience_years=experience_years,
         sector=sector
@@ -67,14 +68,55 @@ def add_dimension_score(db: Session, candidate_id: int, dimension_name: str, sco
     db.refresh(db_score)
     return db_score
 
-def update_candidate_final_score(db: Session, candidate_id: int, final_score: float, recommendation: str):
+def update_candidate_final_score(db: Session, candidate_id: int, final_score: float, recommendation: str, is_fit: bool = True, rejection_reason: str = None):
     db_candidate = db.query(models.Candidate).filter(models.Candidate.id == candidate_id).first()
     if db_candidate:
         db_candidate.final_score = final_score
         db_candidate.recommendation = recommendation
+        db_candidate.is_fit = is_fit
+        db_candidate.rejection_reason = rejection_reason
         db.commit()
         db.refresh(db_candidate)
     return db_candidate
 
 def get_candidates_by_session(db: Session, session_id: int):
     return db.query(models.Candidate).filter(models.Candidate.session_id == session_id).all()
+
+
+def upsert_singleton_job(
+    db: Session,
+    title: str,
+    description: str,
+    skills: list,
+    education_level: str,
+    experience_years: int,
+    sector: str,
+    languages: list | None = None,
+):
+    job = db.query(models.JobProfile).order_by(models.JobProfile.id.asc()).first()
+    serialized_skills = json.dumps(skills)
+    serialized_languages = json.dumps(languages or [])
+
+    if job is None:
+        job = models.JobProfile(
+            title=title,
+            description=description,
+            required_skills=serialized_skills,
+            required_languages=serialized_languages,
+            education_level=education_level,
+            experience_years=experience_years,
+            sector=sector,
+        )
+        db.add(job)
+    else:
+        job.title = title
+        job.description = description
+        job.required_skills = serialized_skills
+        job.required_languages = serialized_languages
+        job.education_level = education_level
+        job.experience_years = experience_years
+        job.sector = sector
+
+    db.commit()
+    db.refresh(job)
+    return job
