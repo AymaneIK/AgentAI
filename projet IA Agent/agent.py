@@ -4,8 +4,8 @@ from rich.table import Table
 from rich.panel import Panel
 import asyncio
 
-from db.database import engine
-from db import models
+from core.db.database import engine
+from core.db import models
 
 models.Base.metadata.create_all(bind=engine)
 console = Console()

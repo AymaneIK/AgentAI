@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 import os
 import secrets
-from db import models, crud
-from db.database import engine, get_db
+from core.db import models, crud
+from core.db.database import engine, get_db
 from core.parser import parse_file
 from core.anonymizer import anonymize_text
 from core.anthropic_client import extract_cv_data, generate_recommendation_note

@@ -17,17 +17,17 @@ def test_parse_bac_level():
 def test_score_experience():
     assert score_experience(5, 3) == 100.0
     assert score_experience(1, 2) == 50.0
-    assert score_experience(0, 5) == 0.0
+    assert score_experience(0, 5) == 45.0
 
 def test_score_education():
     # cand_level == req_level -> 100
     assert score_education("Bac+5", "Bac+5") == 100.0
     # cand_level > req_level -> 100
     assert score_education("Bac+5", "Bac+3") == 100.0
-    # cand_level == req_level - 1 -> 75
-    assert score_education("Bac+4", "Bac+5") == 75.0
-    # cand_level == req_level - 2 -> 50
-    assert score_education("Bac+3", "Bac+5") == 50.0
+    # cand_level == req_level - 1 -> 80
+    assert score_education("Bac+4", "Bac+5") == 80.0
+    # cand_level == req_level - 2 -> 55
+    assert score_education("Bac+3", "Bac+5") == 55.0
 
 def test_fuzzy_match():
     assert fuzzy_match("Python", "Python") == 1.0

@@ -8,11 +8,12 @@ import asyncio
 from werkzeug.utils import secure_filename
 import secrets
 
-# Ensure parent directory is in path to import db and core modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
-from db.database import SessionLocal, engine, migrate_sqlite_schema
-from db import models, crud
+from core.db.database import SessionLocal, engine, migrate_sqlite_schema
+from core.db import models, crud
 from core.parser import parse_file
 from core.anonymizer import anonymize_text
 from core.anthropic_client import extract_cv_data, generate_recommendation_note
@@ -45,7 +46,7 @@ PROJECT_JOB_PROFILE = {
         "Confidentialite",
     ],
     "languages": ["Francais", "Anglais"],
-    "education_level": "Bac+3",
+    "education_level": "Bac+2",
     "experience_years": 1,
     "sector": "Automobile",
 }

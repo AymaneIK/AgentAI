@@ -2,6 +2,8 @@ import os
 import json
 import asyncio
 import random
+import re
+import unicodedata
 from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
 from .prompts import CV_EXTRACTION_PROMPT, RECOMMENDATION_PROMPT, SINGLE_CANDIDATE_NOTE_PROMPT
@@ -20,19 +22,112 @@ if not api_key or api_key == "sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 client = AsyncAnthropic(api_key=api_key)
 MODEL_NAME = "claude-3-5-sonnet-20240620"
 
+NAME_SECTION_HEADERS = {
+    "about me",
+    "a propos",
+    "a propos de moi",
+    "apropos",
+    "apropos de moi",
+    "profile",
+    "profil",
+    "profil professionnel",
+    "professional summary",
+    "summary",
+    "resume summary",
+    "objective",
+    "career objective",
+    "contact",
+    "contact info",
+    "informations personnelles",
+    "personal information",
+    "coordonnees",
+    "coordonnees personnelles",
+    "skills",
+    "competences",
+    "competences techniques",
+    "technical skills",
+    "experience",
+    "work experience",
+    "experiences",
+    "education",
+    "formation",
+    "curriculum vitae",
+    "cv",
+}
+
+
+def _normalize_text(value: str) -> str:
+    ascii_value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"\s+", " ", ascii_value).strip().lower()
+
+
+def _clean_name_candidate(line: str) -> str:
+    cleaned = re.sub(r"[\|\u2022\u2023\u25E6\u2043\u2219]+", " ", line or "").strip()
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    cleaned = cleaned.strip(" -,:;/\\()[]{}")
+    return cleaned
+
+
+def _looks_like_person_name(value: str) -> bool:
+    candidate = _clean_name_candidate(value)
+    if not candidate or len(candidate) < 4 or len(candidate) > 60:
+        return False
+    if any(char.isdigit() for char in candidate):
+        return False
+    if "@" in candidate or "http" in candidate.lower():
+        return False
+
+    normalized = _normalize_text(candidate)
+    if normalized in NAME_SECTION_HEADERS:
+        return False
+    if any(header in normalized for header in NAME_SECTION_HEADERS):
+        return False
+
+    tokens = candidate.split()
+    if len(tokens) < 2 or len(tokens) > 4:
+        return False
+
+    allowed_token = re.compile(r"^[A-Za-z][A-Za-z'.-]*$")
+    lowercase_noise = {
+        "about", "me", "profil", "profile", "summary", "objective", "contact",
+        "skills", "experience", "education", "formation", "curriculum", "vitae",
+        "de", "du", "des", "sur", "avec", "pour", "dans", "the", "and",
+    }
+    uppercase_tokens = 0
+    for token in tokens:
+        stripped = token.strip(".")
+        if not stripped or not allowed_token.match(stripped):
+            return False
+        if _normalize_text(stripped) in lowercase_noise:
+            return False
+        if stripped[0].isupper():
+            uppercase_tokens += 1
+
+    return uppercase_tokens >= 2
+
+
+def extract_candidate_name_from_text(cv_text: str) -> str:
+    lines = [_clean_name_candidate(line) for line in cv_text.splitlines()]
+    lines = [line for line in lines if len(line) >= 4]
+
+    for line in lines[:20]:
+        if _looks_like_person_name(line):
+            return line
+
+    return "Candidat Anonyme"
+
+
+def sanitize_candidate_name(raw_name: str | None, cv_text: str) -> str:
+    if raw_name and _looks_like_person_name(raw_name):
+        return _clean_name_candidate(raw_name)
+    return extract_candidate_name_from_text(cv_text)
+
 async def extract_cv_data(cv_text: str) -> dict:
     if is_mock_mode:
         await asyncio.sleep(0.5) # Simulate latency
         found_skills = [s for s in ["Python", "SQL", "Docker", "Java", "C++", "React", "AWS", "Linux", "Git", "FastAPI", "Bureautique", "Management", "Marketing"] if s.lower() in cv_text.lower() or s in cv_text]
-        
-        # Heuristic to find the real name in the CV: first capitalized couple of words 
-        lines = [line.strip() for line in cv_text.split('\n') if len(line.strip()) > 3]
-        real_name = "Candidat Anonyme"
-        for line in lines[:15]:
-            words = line.split()
-            if 1 < len(words) <= 3 and all(w and w[0].isupper() for w in words):
-                real_name = line
-                break
+
+        real_name = extract_candidate_name_from_text(cv_text)
                 
         seed_value = len(cv_text) if cv_text else random.randint(100, 900)
         
@@ -59,9 +154,11 @@ async def extract_cv_data(cv_text: str) -> dict:
     try:
         json_start = resp_text.find('{')
         json_end = resp_text.rfind('}') + 1
-        return json.loads(resp_text[json_start:json_end])
+        parsed = json.loads(resp_text[json_start:json_end])
+        parsed["nom_candidat"] = sanitize_candidate_name(parsed.get("nom_candidat"), cv_text)
+        return parsed
     except:
-        return {}
+        return {"nom_candidat": extract_candidate_name_from_text(cv_text)}
 
 async def generate_recommendation_note(job_title: str, required_skills: str, candidate_data: dict) -> str:
     if is_mock_mode:

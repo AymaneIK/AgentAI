@@ -103,7 +103,7 @@ def score_experience(cand_exp: int, req_exp: int) -> float:
     if cand_exp >= req_exp:
         return 100.0
     if cand_exp == 0:
-        return 25.0 if req_exp <= 1 else 0.0
+        return 50.0 if req_exp <= 1 else 45.0
     return max(0.0, min(100.0, (cand_exp / req_exp) * 100.0))
 
 
@@ -114,14 +114,14 @@ def score_education(cand_bac: str, req_bac: str) -> float:
     if req_level == 0:
         return 100.0
     if cand_level == 0:
-        return 55.0
+        return 60.0
     if cand_level >= req_level:
         return 100.0
     if cand_level == req_level - 1:
         return 80.0
     if cand_level == req_level - 2:
-        return 60.0
-    return 25.0
+        return 55.0
+    return 40.0
 
 
 def fuzzy_match(s1: str, s2: str) -> float:
@@ -179,7 +179,7 @@ def score_skills(cand_skills: list, req_skills: list) -> float:
     if not req_skills:
         return 100.0 if cand_skills else 50.0
     if not cand_skills:
-        return 25.0
+        return 40.0
 
     matches_score = 0.0
     for req in req_skills:
@@ -187,7 +187,7 @@ def score_skills(cand_skills: list, req_skills: list) -> float:
         matches_score += best_match
 
     coverage_score = (matches_score / len(req_skills)) * 100.0
-    bonus = min(8.0, max(0, len(cand_skills) - 2) * 1.0)
+    bonus = min(10.0, max(0, len(cand_skills) - 2) * 2.0)
     return min(100.0, coverage_score + bonus)
 
 
@@ -205,7 +205,7 @@ def score_languages(cand_langs: list, req_langs: list) -> float:
     if not req_langs:
         return 100.0 if cand_langs else 50.0
     if not cand_langs:
-        return 35.0
+        return 45.0
 
     matches = 0.0
     for req in req_langs:
@@ -220,13 +220,13 @@ def score_sector(cand_sectors: list, req_sector: str) -> float:
     if not req_sector:
         return 100.0
     if not cand_sectors:
-        return 50.0
+        return 55.0
     best_match = max([fuzzy_match(req_sector, sector) for sector in cand_sectors] + [0.0])
-    return min(100.0, max(best_match, 0.35) * 100.0 if best_match > 0 else 45.0)
+    return min(100.0, max(best_match, 0.4) * 100.0 if best_match > 0 else 50.0)
 
 
 def score_num_experiences(num_exp: int) -> float:
-    curve = {0: 35.0, 1: 55.0, 2: 75.0, 3: 90.0, 4: 100.0, 5: 100.0}
+    curve = {0: 50.0, 1: 65.0, 2: 80.0, 3: 90.0, 4: 100.0, 5: 100.0}
     return curve.get(int(num_exp or 0), 100.0)
 
 
@@ -256,32 +256,11 @@ def calculate_all_scores(candidate_data: dict, job_profile: dict) -> dict:
         "nombre_experiences": score_num_experiences(cand_num_exp),
     }
 
+    # Always fit - let the score decide
     is_fit = True
     rejection_reason = None
 
-    cand_level = parse_bac_level(cand_bac)
-    req_level = parse_bac_level(req_bac)
-
-    # Reject only when there is strong evidence of a large gap.
-    if req_level and cand_level and cand_level < req_level - 1:
-        is_fit = False
-        rejection_reason = (
-            f"Le niveau d'etude semble trop eloigne du besoin. "
-            f"Requis: {req_bac}, detecte: {cand_bac or 'Inconnu'}."
-        )
-    elif req_exp >= 2 and cand_exp == 0:
-        is_fit = False
-        rejection_reason = (
-            f"L'experience detectee est insuffisante pour ce poste. "
-            f"Requis: {req_exp} ans, detecte: {cand_exp} an(s)."
-        )
-    elif req_skills and cand_skills and scores["competences_techniques"] < 12.0:
-        is_fit = False
-        rejection_reason = (
-            "Le CV ne montre pas assez de competences proches du besoin en recrutement."
-        )
-
-    final_score = 0.0 if not is_fit else sum(scores[key] * WEIGHTS[key] for key in scores.keys())
+    final_score = sum(scores[key] * WEIGHTS[key] for key in scores.keys())
 
     return {
         "dimensions": scores,
