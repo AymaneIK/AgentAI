@@ -1,0 +1,188 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<section class="hero-panel">
+    <div>
+        <span class="eyebrow">Screening IA pour recrutement RH</span>
+        <h1 class="hero-title">Tableau de bord de tri CV</h1>
+        <p class="hero-copy">
+            Analysez des candidatures en lot selon une fiche de poste fixe, suivez les sessions de screening,
+            puis comparez rapidement les profils les plus proches du besoin.
+        </p>
+    </div>
+    <div class="hero-metrics">
+        <div class="metric-pill">
+            <strong>{{ sessions|length }}</strong>
+            <span>sessions lancees</span>
+        </div>
+        <div class="metric-pill">
+            <strong>{{ job_skills|length }}</strong>
+            <span>competences clefs</span>
+        </div>
+        <div class="metric-pill">
+            <strong>{{ job_languages|length }}</strong>
+            <span>langues suivies</span>
+        </div>
+    </div>
+</section>
+
+<div class="dashboard-shell">
+    <aside class="dashboard-sidebar">
+        <div class="card profile-card">
+            <div class="section-head">
+                <span class="section-kicker">Fiche de poste</span>
+                <h2>Profil actif du projet</h2>
+            </div>
+            {% if job %}
+            <div class="profile-spotlight">
+                <div class="profile-badge">Automobile</div>
+                <h3>{{ job.title }}</h3>
+                <p>{{ job.description }}</p>
+            </div>
+
+            <div class="detail-grid">
+                <div class="detail-chip">
+                    <span>Niveau</span>
+                    <strong>Bac+3</strong>
+                </div>
+                <div class="detail-chip">
+                    <span>Experience</span>
+                    <strong>{{ job.experience_years }} an(s)</strong>
+                </div>
+                <div class="detail-chip">
+                    <span>Secteur</span>
+                    <strong>{{ job.sector }}</strong>
+                </div>
+                <div class="detail-chip">
+                    <span>Langues</span>
+                    <strong>{{ job_languages|join(', ') }}</strong>
+                </div>
+            </div>
+
+            <div class="tag-cloud">
+                {% for skill in job_skills %}
+                <span class="tag">{{ skill }}</span>
+                {% endfor %}
+            </div>
+
+            <p class="support-note">
+                Cette fiche est verrouillee pour ce projet: chaque CV est evalue selon ces criteres.
+            </p>
+            {% else %}
+            <p>Aucune fiche de poste disponible.</p>
+            {% endif %}
+
+            <a href="{{ url_for('scoring_rules') }}" class="btn profile-link">Voir les regles de scoring</a>
+        </div>
+    </aside>
+
+    <section class="dashboard-main">
+        <div class="card upload-card">
+            <div class="section-head">
+                <span class="section-kicker">Import candidats</span>
+                <h2>Lancer une session de screening</h2>
+            </div>
+            <p class="section-copy">
+                Deposez plusieurs CVs en PDF ou DOCX. L'agent les analysera tous par rapport a la fiche de poste
+                recrutement secteur automobile.
+            </p>
+
+            <form action="{{ url_for('screen_job') }}" method="POST" enctype="multipart/form-data" id="screenForm">
+                <div class="cyber-dropzone" id="dropzone">
+                    <div class="dropzone-icon">+</div>
+                    <h4>Glissez vos CVs ici</h4>
+                    <p>Ou cliquez pour ajouter plusieurs fichiers d'un seul coup.</p>
+                    <input type="file" name="cv_files" id="cv_files" multiple accept=".pdf,.doc,.docx" required>
+                </div>
+
+                <div id="file-preview-list" class="preview-list"></div>
+
+                <label class="checkbox-panel">
+                    <input type="checkbox" name="anonymize" value="true">
+                    <span>
+                        <strong>Anonymiser les profils</strong>
+                        Supprime les noms et contacts avant l'analyse pour reduire les biais.
+                    </span>
+                </label>
+
+                <button type="submit" class="btn btn-accent launch-btn">Lancer le screening IA</button>
+            </form>
+        </div>
+
+        <div class="card sessions-card">
+            <div class="section-head">
+                <span class="section-kicker">Historique</span>
+                <h2>Sessions de screening</h2>
+                <a href="{{ url_for('clear_results') }}" class="btn btn-danger" style="margin-top: 10px; background: #e74c3c; color: white;" onclick="return confirm('Voulez-vous vraiment supprimer tous les résultats et vider les fichiers temporaires ?')">Supprimer les résultats / Vider Temp</a>
+            </div>
+
+            {% if sessions %}
+            <div class="session-list">
+                {% for session in sessions %}
+                <article class="session-item">
+                    <div class="session-meta">
+                        <div class="session-date">{{ session.timestamp.strftime('%d/%m/%Y %H:%M') }}</div>
+                        <h3>Session #{{ session.id }}</h3>
+                        <p>Job #{{ session.job_id }} / {{ session.candidates|length }} CV(s) analyses</p>
+                    </div>
+                    <div class="session-actions">
+                        <form action="{{ url_for('compare') }}" method="GET">
+                            <input type="hidden" name="ids" value="{{ session.candidates|map(attribute='id')|join(',') }}">
+                            <button type="submit" class="btn session-btn">Voir les resultats</button>
+                        </form>
+                        <a href="{{ url_for('export_session', session_id=session.id) }}" class="btn btn-accent session-btn session-link">Export Excel</a>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <h3>Aucune session recente</h3>
+                <p>Votre prochaine analyse apparaitra ici avec les liens de comparaison et d'export.</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<script>
+    const fileInput = document.getElementById('cv_files');
+    const previewList = document.getElementById('file-preview-list');
+    const dropzone = document.getElementById('dropzone');
+    const dataTransfer = new DataTransfer();
+
+    function updatePreview() {
+        previewList.innerHTML = '';
+        Array.from(fileInput.files).forEach(file => {
+            const el = document.createElement('div');
+            el.className = 'file-badge';
+            el.innerHTML = `<span>${file.name}</span><span>${(file.size / 1024).toFixed(1)} KB</span>`;
+            previewList.appendChild(el);
+        });
+    }
+
+    fileInput.addEventListener('change', () => {
+        Array.from(fileInput.files).forEach(file => dataTransfer.items.add(file));
+        fileInput.files = dataTransfer.files;
+        updatePreview();
+    });
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, event => {
+            event.preventDefault();
+            event.stopPropagation();
+        }, false);
+    });
+
+    dropzone.addEventListener('dragover', () => dropzone.classList.add('dragover'));
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', event => {
+        dropzone.classList.remove('dragover');
+        if (event.dataTransfer.files.length > 0) {
+            Array.from(event.dataTransfer.files).forEach(file => dataTransfer.items.add(file));
+            fileInput.files = dataTransfer.files;
+            updatePreview();
+        }
+    });
+</script>
+{% endblock %}
